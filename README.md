@@ -363,3 +363,243 @@ Repositorio:
 https://github.com/Fabrizzio-07/ProyectoWebCine
 
 Las modificaciones se administran mediante commits para mantener un historial de desarrollo.
+
+## 12. Instalación inicial en una computadora nueva (Windows)
+
+Esta sección es para integrantes que todavía no tienen Java, Tomcat, SQL Server ni el proyecto instalado. Las rutas se deben adaptar a cada computadora.
+
+**Estado de la guía:** la aplicación funciona en el equipo de desarrollo, pero todavía no se ha validado una instalación limpia en otra computadora. En particular, el repositorio contiene la estructura de SQL Server pero NO incluye cuentas de acceso ni datos iniciales. Seguir estos pasos no garantiza poder iniciar sesión hasta completar el apartado 12.7.
+
+### 12.1. Instalar las herramientas
+
+Instalar en el orden siguiente:
+
+1. Git para Windows: https://git-scm.com/downloads/win
+2. Java **JDK 17**, por ejemplo Eclipse Temurin 17: https://adoptium.net/temurin/releases/?version=17
+3. Apache Tomcat **9** (no Tomcat 10): https://tomcat.apache.org/download-90.cgi
+4. Microsoft SQL Server, edición apropiada para desarrollo: https://www.microsoft.com/en-us/sql-server/sql-server-downloads
+5. SQL Server Management Studio (SSMS): https://learn.microsoft.com/en-us/ssms/install/install
+6. Apache NetBeans (recomendado para editar; no obligatorio para compilar): https://netbeans.apache.org/download/
+
+El proyecto ya incluye el **Gradle Wrapper**, por lo que no hace falta instalar Gradle separadamente. Se requiere acceso a Internet en la primera compilación para descargar Gradle y las dependencias.
+
+Abrir CMD y comprobar:
+
+~~~bat
+git --version
+java -version
+javac -version
+~~~
+
+Java y javac deben mostrar la versión 17. No basta con instalar únicamente el JRE.
+
+### 12.2. Descargar el repositorio privado
+
+Primero aceptar la invitación al repositorio enviada por el propietario en GitHub. Después ejecutar en CMD:
+
+~~~bat
+cd /d "%USERPROFILE%\Documents"
+git clone https://github.com/Fabrizzio-07/ProyectoWebCine.git
+cd ProyectoWebCine
+git branch --show-current
+~~~
+
+La rama inicial debe ser main. GitHub podría pedir autenticación mediante el navegador.
+
+### 12.3. Configurar JAVA_HOME y verificar JDK 17
+
+Abrir Inicio de Windows, buscar **Editar las variables de entorno del sistema**, entrar a **Variables de entorno**, crear JAVA_HOME con la carpeta real del JDK 17 (sin agregar bin al final) y añadir %JAVA_HOME%\bin a la variable Path si no está presente.
+
+Cerrar y volver a abrir CMD. Verificar:
+
+~~~bat
+echo %JAVA_HOME%
+java -version
+javac -version
+~~~
+
+Alternativamente, solo en la ventana CMD actual:
+
+~~~bat
+set "JAVA_HOME=RUTA_REAL_DEL_JDK_17"
+set "JRE_HOME=%JAVA_HOME%"
+set "PATH=%JAVA_HOME%\bin;%PATH%"
+~~~
+
+Reemplazar RUTA_REAL_DEL_JDK_17 por la carpeta donde se instaló Java. No asumir que todos usan la misma ruta.
+
+### 12.4. Preparar el motor SQL Server
+
+Instalar SQL Server y SSMS. Comprobar que el servicio del motor correspondiente a la instancia esté iniciado.
+
+La aplicación utiliza autenticación SQL con usuario y contraseña propios. Si SQL Server permite solo autenticación de Windows, un administrador debe entrar a SSMS, abrir las propiedades del servidor, sección **Seguridad**, habilitar **Autenticación de SQL Server y Windows (modo mixto)** y reiniciar el servicio del motor. No es necesario habilitar la cuenta sa.
+
+Comprobar el nombre de la instancia y el puerto TCP utilizado. Para conexiones TCP/IP, verificar el protocolo y puerto en SQL Server Configuration Manager; muchas instalaciones no emplean el puerto 1433 de manera predeterminada. Si se cambia la configuración del servicio, reiniciarlo.
+
+Conectarse a SSMS y ejecutar esta consulta de diagnóstico, que no modifica datos:
+
+~~~sql
+SELECT @@SERVERNAME AS servidor,
+       DB_NAME() AS base_actual,
+       SYSTEM_USER AS identidad_sql,
+       ORIGINAL_LOGIN() AS login_original;
+~~~
+
+No abrir puertos SQL Server hacia Internet para esta práctica local.
+
+### 12.5. Ejecutar el script de la base de datos: solo en una instalación nueva
+
+**IMPORTANTE:** no ejecutar database/01_schema.sql en la base de datos real de otro integrante ni sobre una base existente. El script todavía no se ha validado en una instalación limpia. Además, los separadores GO hacen que su comprobación inicial no proteja automáticamente todos los lotes siguientes.
+
+En SSMS, conectarse a una **instancia de pruebas** con una cuenta autorizada para crear bases de datos. Ejecutar primero:
+
+~~~sql
+SELECT DB_ID(N'confiteria') AS id_base_existente;
+~~~
+
+**Continuar solo si el resultado es NULL.** Si devuelve un número, detenerse; no eliminar ni reemplazar la base.
+
+Para una instancia nueva sin esa base:
+
+1. Abrir en SSMS el archivo database/01_schema.sql mediante **Archivo > Abrir > Archivo**.
+2. Comprobar que el editor está conectado a la instancia de pruebas correcta.
+3. Revisar el script y ejecutarlo una única vez.
+4. Examinar la pestaña **Mensajes**; detenerse si aparece cualquier error.
+
+Verificar la creación con consultas de solo lectura:
+
+~~~sql
+USE confiteria;
+GO
+SELECT DB_NAME() AS base_actual;
+SELECT name FROM sys.tables ORDER BY name;
+SELECT name FROM sys.procedures ORDER BY name;
+~~~
+
+### 12.6. Crear y comprobar el usuario SQL de la aplicación
+
+En SSMS, conectado con una cuenta administradora de la instancia de pruebas:
+
+1. Abrir **Seguridad > Inicios de sesión** y seleccionar **Nuevo inicio de sesión**.
+2. Elegir un nombre para el usuario de la aplicación, seleccionar **Autenticación de SQL Server** y definir una contraseña privada.
+3. En **Asignación de usuarios**, seleccionar la base confiteria y asignar los permisos requeridos para las operaciones de la aplicación: lectura, inserción, actualización, eliminación y ejecución de procedimientos almacenados cuando correspondan. Un administrador deberá comprobar los permisos. No conceder privilegios de administrador del servidor.
+4. Guardar los cambios.
+
+**Prueba del usuario y contraseña:** cerrar la conexión administrativa y crear una conexión nueva en SSMS seleccionando **Autenticación de SQL Server**. Introducir el nombre y la contraseña recién creados. La conexión debe funcionar y permitir seleccionar la base confiteria.
+
+Ejecutar estas consultas de comprobación:
+
+~~~sql
+USE confiteria;
+GO
+SELECT SYSTEM_USER AS usuario_conectado, DB_NAME() AS base_actual;
+SELECT HAS_PERMS_BY_NAME(N'dbo.Producto', 'OBJECT', 'SELECT') AS puede_leer_producto;
+SELECT HAS_PERMS_BY_NAME(N'dbo.Producto', 'OBJECT', 'UPDATE') AS puede_actualizar_producto;
+~~~
+
+Para las consultas HAS_PERMS_BY_NAME, 1 significa que el permiso consultado está disponible. La comprobación no sustituye las pruebas reales de escritura de la aplicación. No compartir capturas donde aparezcan contraseñas.
+
+### 12.7. Datos iniciales: requisito aún pendiente
+
+**El repositorio NO incluye un script validado de datos iniciales.** El script de esquema crea tablas y procedimientos, pero no inserta roles, empleados, productos ni cuentas administrativas.
+
+El inicio de sesión necesita un usuario registrado en Personal. Además, el registro de nuevos empleados ahora exige una sesión de Administrador. Por ello, una base completamente vacía no permite crear el primer administrador desde la interfaz.
+
+El equipo deberá preparar y validar, en una base de datos desechable, un script independiente que incorpore roles, una cuenta de prueba con el formato de contraseña compatible con el sistema y productos ficticios. No exportar cuentas reales ni reutilizar contraseñas del equipo original.
+
+**No puedo confirmar todavía que el inicio de sesión funcione en una instalación recién creada** sin completar este paso.
+
+### 12.8. Configurar usuario y contraseña de SQL Server en Tomcat
+
+Dentro de la instalación local de Tomcat 9, crear el archivo privado bin\setenv.bat. Ejemplo con datos ficticios:
+
+~~~bat
+@echo off
+set "DB_HOST=localhost"
+set "DB_PORT=1433"
+set "DB_NAME=confiteria"
+set "DB_USER=USUARIO_SQL_LOCAL"
+set "DB_PASSWORD=CONTRASENA_SQL_LOCAL"
+~~~
+
+Reemplazar los valores de usuario y contraseña con los creados en SSMS. Ajustar DB_HOST y DB_PORT al servidor y puerto realmente configurados.
+
+**Nunca publicar setenv.bat ni contraseñas reales en GitHub.** El archivo .env.example del repositorio es solo una referencia: Java no lo carga automáticamente. Actualmente la conexión JDBC utiliza encrypt=false, destinado únicamente al entorno académico local de pruebas; no es una configuración recomendada para producción.
+
+### 12.9. Compilar por primera vez
+
+En CMD, dentro de la carpeta clonada del proyecto:
+
+~~~bat
+java -version
+gradlew.bat clean war
+~~~
+
+Debe aparecer BUILD SUCCESSFUL. El archivo creado será build\libs\ModuloConfiteria.war.
+
+Si falla, revisar primero JAVA_HOME, versión de Java, acceso a Internet y el mensaje de error. No utilizar el botón Run de NetBeans para desplegar esta copia si se trabaja con el método de CMD y WAR.
+
+### 12.10. Desplegar e iniciar Tomcat
+
+Método sencillo para una **instalación nueva**: con Tomcat detenido y sin un despliegue previo de ModuloConfiteria, copiar el WAR generado a la carpeta webapps de Tomcat con nombre ModuloConfiteria.war.
+
+**No mezclar** este método con un descriptor existente conf\Catalina\localhost\ModuloConfiteria.xml que apunte a otra ubicación del WAR.
+
+Ejemplo únicamente para quien instaló Tomcat en C:\apache-tomcat-9.0.118, ejecutando CMD desde la carpeta del proyecto:
+
+~~~bat
+copy /Y "build\libs\ModuloConfiteria.war" "C:\apache-tomcat-9.0.118\webapps\ModuloConfiteria.war"
+set "CATALINA_HOME=C:\apache-tomcat-9.0.118"
+set "CATALINA_BASE=C:\apache-tomcat-9.0.118"
+set "JRE_HOME=%JAVA_HOME%"
+"C:\apache-tomcat-9.0.118\bin\startup.bat"
+~~~
+
+Adaptar la carpeta si la instalación de Tomcat está en otra ubicación.
+
+Abrir en el navegador:
+
+http://localhost:8080/ModuloConfiteria/
+
+Para detener Tomcat desde CMD con las variables de Tomcat configuradas:
+
+~~~bat
+"C:\apache-tomcat-9.0.118\bin\shutdown.bat"
+~~~
+
+La URL puede responder incluso si aún faltan usuarios y productos de demostración. Para iniciar sesión y operar hacen falta los datos iniciales del apartado 12.7.
+
+### 12.11. Lista de comprobación final
+
+- Git puede clonar el repositorio y la rama main.
+- java y javac corresponden a JDK 17.
+- SQL Server está funcionando y SSMS permite iniciar sesión con el usuario SQL de la aplicación.
+- Existe la base confiteria con sus tablas y procedimientos.
+- Tomcat tiene el archivo privado setenv.bat con las credenciales locales.
+- Gradle muestra BUILD SUCCESSFUL y genera el WAR.
+- Tomcat inicia y la aplicación responde en el navegador.
+- **Pendiente:** contar con cuentas, roles y productos de demostración para iniciar sesión en una instalación recién creada.
+- **Pendiente:** probar el procedimiento completo en otro equipo sin depender de archivos privados del desarrollador original.
+
+### 12.12. Recomendaciones para trabajar en equipo
+
+Crear una rama distinta para cada tarea. Desde la carpeta del proyecto:
+
+~~~bat
+git switch main
+git pull --ff-only origin main
+git switch -c nombre-de-mi-tarea
+~~~
+
+Tras guardar los cambios y verificar que no haya secretos ni archivos innecesarios:
+
+~~~bat
+git status
+git add .
+git commit -m "Descripcion de los cambios"
+git push -u origin nombre-de-mi-tarea
+~~~
+
+Crear un Pull Request en GitHub para revisión antes de integrar en main.
+
+La eliminación de los módulos de boletos y gestión de personal todavía está pendiente; no borrar indiscriminadamente las clases relacionadas con Personal y Rol, porque la autenticación y las ventas actualmente dependen de ellas.
