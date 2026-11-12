@@ -18,6 +18,16 @@ public class RegistroPersonalServlet extends HttpServlet {
             HttpServletResponse response)
             throws ServletException, IOException {
 
+        // Unicamente administradores autenticados pueden crear personal.
+        if (com.boletos.Tools.BoletosUtil.obtenerUsuario(request) == null) {
+            response.sendRedirect(request.getContextPath() + "/login.jsp");
+            return;
+        }
+        if (!com.boletos.Tools.BoletosUtil.esAdministrador(request)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Se requiere el rol Administrador.");
+            return;
+        }
+
         // Obtener datos del formulario
         String nombre = request.getParameter("nombreCompleto");
         if(!nombre.matches("[A-Za-zÁÉÍÓÚáéíóúÑñ ]+")){
