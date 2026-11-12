@@ -96,11 +96,11 @@ El proyecto fue probado localmente en Windows 11.
 
 El proyecto utiliza Microsoft SQL Server y una base de datos denominada confiteria.
 
-El archivo database/01_schema.sql contiene la estructura de las tablas y los objetos SQL necesarios para el sistema.
+El archivo database/01_schema.sql contiene la estructura de las tablas y los objetos SQL necesarios para el sistema. El archivo database/02_datos_prueba.sql agrega datos ficticios solo para una instalación nueva de demostración (ver apartado 12.7).
 
-Este archivo no incluye los registros iniciales de la aplicación, como cuentas de usuario, productos o películas.
+El script 01 no incluye registros iniciales; el script 02 agrega roles, cuentas web de prueba y productos ficticios, pero no películas.
 
-Para una instalación completamente nueva será necesario configurar dichos datos. La instalación desde cero todavía está pendiente de validación.
+Para una instalación completamente nueva de demostración se pueden usar los dos scripts en orden. La instalación desde cero todavía está pendiente de validación en otro equipo.
 
 No ejecutar el script sobre una base de datos existente sin revisar previamente su contenido.
 
@@ -346,7 +346,7 @@ La aplicación fue probada localmente utilizando Java 17, Apache Tomcat 9 y Micr
 
 El proyecto no incluye automáticamente una instalación de SQL Server ni un servidor Tomcat.
 
-El archivo de estructura SQL no incorpora cuentas de usuario ni todos los datos necesarios para una instalación completamente funcional.
+El archivo de estructura SQL no incorpora registros. Existe un segundo script opcional de datos de demostración (roles, cuentas web y productos), exclusivo para bases de pruebas, que no incluye todas las funciones del cine.
 
 Por ello, una instalación nueva requiere configuración adicional de la base de datos.
 
@@ -368,7 +368,7 @@ Las modificaciones se administran mediante commits para mantener un historial de
 
 Esta sección es para integrantes que todavía no tienen Java, Tomcat, SQL Server ni el proyecto instalado. Las rutas se deben adaptar a cada computadora.
 
-**Estado de la guía:** la aplicación funciona en el equipo de desarrollo, pero todavía no se ha validado una instalación limpia en otra computadora. En particular, el repositorio contiene la estructura de SQL Server pero NO incluye cuentas de acceso ni datos iniciales. Seguir estos pasos no garantiza poder iniciar sesión hasta completar el apartado 12.7.
+**Estado de la guía:** la aplicación funciona en el equipo de desarrollo, pero todavía no se ha validado una instalación limpia en otra computadora. El repositorio incluye el esquema SQL y un segundo script de datos ficticios exclusivamente para pruebas (apartado 12.7).
 
 ### 12.1. Instalar las herramientas
 
@@ -499,15 +499,43 @@ SELECT HAS_PERMS_BY_NAME(N'dbo.Producto', 'OBJECT', 'UPDATE') AS puede_actualiza
 
 Para las consultas HAS_PERMS_BY_NAME, 1 significa que el permiso consultado está disponible. La comprobación no sustituye las pruebas reales de escritura de la aplicación. No compartir capturas donde aparezcan contraseñas.
 
-### 12.7. Datos iniciales: requisito aún pendiente
+### 12.7. Datos de demostración (script 02, solo para pruebas)
 
-**El repositorio NO incluye un script validado de datos iniciales.** El script de esquema crea tablas y procedimientos, pero no inserta roles, empleados, productos ni cuentas administrativas.
+Después de ejecutar **database/01_schema.sql** sobre una instancia de pruebas completamente nueva y sin datos reales, utilizar **database/02_datos_prueba.sql** para cargar datos ficticios.
 
-El inicio de sesión necesita un usuario registrado en Personal. Además, el registro de nuevos empleados ahora exige una sesión de Administrador. Por ello, una base completamente vacía no permite crear el primer administrador desde la interfaz.
+**ATENCIÓN:** este archivo está diseñado exclusivamente para equipos de desarrollo y bases descartables. No ejecutarlo en producción ni sobre la base de datos original del proyecto. El archivo verifica que las tablas Rol, Personal y Producto estén vacías y se niega a insertar datos sin autorización explícita. No crea usuarios/login de SQL Server; las credenciales DB_USER y DB_PASSWORD se configuran por separado como se explica en 12.6 y 12.8.
 
-El equipo deberá preparar y validar, en una base de datos desechable, un script independiente que incorpore roles, una cuenta de prueba con el formato de contraseña compatible con el sistema y productos ficticios. No exportar cuentas reales ni reutilizar contraseñas del equipo original.
+1. En SSMS, conectarse a la **instancia de pruebas** donde se creó confiteria. Comprobar que se trata de la instancia correcta.
+2. Abrir **Archivo > Abrir > Archivo** y elegir **database/02_datos_prueba.sql**.
+3. Localizar al inicio las variables `@ClaveAdmin` y `@ClaveCajero`. Sustituir los valores CAMBIAR_CLAVE_ADMIN y CAMBIAR_CLAVE_CAJERO por dos claves ficticias distintas, de al menos 8 caracteres. No reutilizar claves reales. **No guardar ni subir a GitHub la versión editada con las contraseñas.**
+4. Cambiar `@ConfirmarDatosPrueba` de `0` a `1`, únicamente después de verificar que la base es desechable.
+5. Ejecutar el archivo desde SSMS y revisar la pestaña **Mensajes**. Si aparece un error, detenerse; no volver a ejecutarlo a ciegas.
+6. Revisar los resultados finales del script: deben aparecer los roles Administrador y Cajero, dos cuentas de demostración y cinco productos con stock. El script está diseñado para ejecutarse una sola vez sobre tablas vacías.
 
-**No puedo confirmar todavía que el inicio de sesión funcione en una instalación recién creada** sin completar este paso.
+**Cuentas de la aplicación web (no son usuarios SQL Server):**
+
+| Usuario web | Rol | Contraseña |
+|---|---|---|
+| `demo_admin` | Administrador | El valor local elegido en `@ClaveAdmin` |
+| `demo_cajero` | Cajero | El valor local elegido en `@ClaveCajero` |
+
+Las contraseñas se almacenan mediante el hash SHA-256 utilizado actualmente por la validación de la aplicación. Este mecanismo no se recomienda en producción; aquí se conserva la compatibilidad del proyecto académico. El archivo no inserta contraseñas en texto claro ni contiene contraseñas reales.
+
+Para verificar la carga después de ejecutarlo, consultar en SSMS, sin mostrar hashes:
+
+~~~sql
+USE confiteria;
+GO
+SELECT r.nombre_rol FROM dbo.Rol r ORDER BY r.id_rol;
+SELECT p.usuario, r.nombre_rol, p.estado
+FROM dbo.Personal p INNER JOIN dbo.Rol r ON r.id_rol = p.id_rol;
+SELECT id_producto, nombre, precio, stock
+FROM dbo.Producto ORDER BY id_producto;
+~~~
+
+Luego iniciar Tomcat y probar el acceso con la cuenta de demostración correspondiente. **No puedo confirmar su funcionamiento hasta que un integrante ejecute ambos scripts en una instalación nueva y complete las pruebas.**
+
+**En un entorno real:** crear la estructura, configurar los roles y aprovisionar la primera cuenta administradora mediante un procedimiento seguro y credenciales privadas; dar de alta el resto de los usuarios mediante el flujo autorizado. Nunca trasladar estos usuarios, claves ni productos de demostración a producción.
 
 ### 12.8. Configurar usuario y contraseña de SQL Server en Tomcat
 
@@ -578,7 +606,7 @@ La URL puede responder incluso si aún faltan usuarios y productos de demostraci
 - Tomcat tiene el archivo privado setenv.bat con las credenciales locales.
 - Gradle muestra BUILD SUCCESSFUL y genera el WAR.
 - Tomcat inicia y la aplicación responde en el navegador.
-- **Pendiente:** contar con cuentas, roles y productos de demostración para iniciar sesión en una instalación recién creada.
+- Ejecutar el script 02 de datos ficticios solo en una base desechable, configurar claves de demostración y verificar el acceso web.
 - **Pendiente:** probar el procedimiento completo en otro equipo sin depender de archivos privados del desarrollador original.
 
 ### 12.12. Recomendaciones para trabajar en equipo
