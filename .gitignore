@@ -1,0 +1,25 @@
+
+# Gradle
+.gradle/
+build/
+
+# Credenciales y configuración privada
+.env
+.env.*
+!.env.example
+setenv.bat
+
+# Copias de seguridad y bases de datos
+*.bak
+*.mdf
+*.ldf
+
+# IDE
+.idea/
+.vscode/
+nbproject/private/
+
+# Archivos temporales
+*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,74 @@
+/*
+Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/CascadeStyleSheet.css to edit this template
+*/
+/* 
+    Created on : 27 jun. 2026, 11:11:22
+    Author     : ancaj
+*/
+
+.sidebar {
+    width: 240px;
+    background-color: var(--cine-dark);
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    color: white;
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.brand-logo {
+    padding: 0 20px 30px;
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+.user-info {
+    padding: 0 20px 30px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-info img {
+    width: 45px;
+    height: 45px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.nav-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+}
+
+.nav-item {
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    color: #aaa;
+    text-decoration: none;
+    transition: 0.3s;
+    border-left: 4px solid transparent;
+}
+
+.nav-item:hover,
+.nav-item.active {
+    background-color: #1e1e1e;
+    color: white;
+    border-left-color: var(--cine-red);
+}
+
+.logout-item {
+    padding: 20px;
+    color: var(--cine-red);
+    text-decoration: none;
+    border-top: 1px solid #222;
+}
+
